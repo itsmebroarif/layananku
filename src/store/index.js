@@ -31,6 +31,7 @@ const store = createStore({
         transactions: state.transactions.list,
         events: state.events.list,
         staff: state.staff.list,
+        staffCustom: state.staff.custom,
         mitras: state.mitras.list,
         projects: state.projects.list,
         prospects: state.prospects.list,
@@ -46,6 +47,7 @@ const store = createStore({
       if (Array.isArray(payload.transactions)) commit('transactions/REPLACE_ALL', payload.transactions)
       if (Array.isArray(payload.events)) commit('events/REPLACE_ALL', payload.events)
       if (Array.isArray(payload.staff)) commit('staff/REPLACE_ALL', payload.staff)
+      if (payload.staffCustom && typeof payload.staffCustom === 'object') commit('staff/REPLACE_CUSTOM', payload.staffCustom)
       if (Array.isArray(payload.mitras)) commit('mitras/REPLACE_ALL', payload.mitras)
       if (Array.isArray(payload.projects)) commit('projects/REPLACE_ALL', payload.projects)
       if (Array.isArray(payload.prospects)) commit('prospects/REPLACE_ALL', payload.prospects)
@@ -58,6 +60,7 @@ const store = createStore({
       commit('transactions/REPLACE_ALL', [])
       commit('events/REPLACE_ALL', [])
       commit('staff/REPLACE_ALL', [])
+      commit('staff/RESET_CUSTOM')
       commit('mitras/REPLACE_ALL', [])
       commit('projects/REPLACE_ALL', [])
       commit('prospects/REPLACE_ALL', [])
