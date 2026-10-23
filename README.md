@@ -18,6 +18,7 @@ Aplikasi layanan pelanggan & manajemen bisnis **all-in-one** (PWA — installabl
 - [Diagram Alur](#-diagram-alur)
 - [Tech Stack](#-tech-stack)
 - [Keamanan](#-keamanan)
+- [Portabilitas](#-portabilitas)
 - [Menjalankan & Deploy](#-menjalankan--deploy)
 - [Struktur Proyek](#-struktur-proyek)
 
@@ -222,13 +223,53 @@ Catatan penting: tidak ada server, tidak ada database remote, tidak ada analitik
 1. **Zero-backend = meminimalkan serangan** — tidak ada API, tidak ada login, tidak ada database remote yang bisa dicuri dari tamu jaringan. Tidak ada kredensial yang disimpan.
 2. **Isolasi data** — semua data berada di `localStorage` browser, terikat pada origin (domain) aplikasi, hanya dapat dibaca di perangkat Anda. Hosting Vercel memakai **HTTPS otomatis**.
 3. **Tanpa pihak ketiga** — font & ikon di-bundle lokal (bukan CDN Google), tidak ada skrip analitik/iklan, tidak ada yang bisa melacak pengguna.
-4. Perlindungan **XSS** pada dokumen cetak — semua input pengguna (nama/mitra/harga dll.) di-escape HTML sebelum dirender ke window print (`esc()` di `src/utils/printProject.js`).
+4. Perlindungan **XSS** berlapis:
+   - Vue 3 meng-escape semua interpolasi template secara bawaan; proyek ini **tidak memakai `v-html`, `innerHTML`, `eval()`, maupun `new Function()`** — diverifikasi bersih di seluruh basis kode.
+   - Ketiga jalur cetak — invoice/nota/kwitansi (`src/utils/printProject.js`), struk POS (`src/views/PosView.vue`), dan laporan (`src/views/ReportsView.vue`) — meng-escape semua input pengguna lewat fungsi `esc()` sebelum masuk ke jendela print, sehingga nama pelanggan/harga/catatan tidak bisa menyuntik skrip.
 5. **Impor yang dibatasi** — file Excel & CSV hanya dibaca di memori browser (FileReader), dinormalisasi ke string & angka sebelum masuk state; tanpa eksekusi makro, tanpa akses berkas sistem.
 6. **Secret-free** — tidak ada `.env`, tidak ada token/private key, tidak ada kredensial yang bisa bocor dari repo.
 7. **Data bisa dikendalikan sepenuhnya pengguna**: Ekspor JSON kapan saja, hapus seluruh data dengan **Reset Data**, dan browser native membersihkan data situs jika diinginkan.
 8. **Dependencies terkunci** — lockfile `package-lock.json` di-commit; perbarui berkala dan jalankan `npm audit`.
+9. **Batas keamanan yang perlu dipahami jujur** — `localStorage` **tidak terenkripsi**: siapa pun yang membuka aplikasi di perangkat Anda (termasuk lewat DevTools) bisa membaca isinya. Karena itu: aktifkan kunci layar/perangkat, jangan simpan data sensitif tingkat tinggi (nomor kartu, KTP, kredensial pihak ketiga), dan manfaatkan Ekspor JSON + enkripsi berkas bila perlu.
 
 > ⚠️ Catatan jujur: model ini sangat kuat untuk penggunaan **per-perangkat** (individu + backup). Sinkronisasi multi-perangkat/tim membutuhkan backend & autentikasi sendiri — itu ekspansi terpisah, bukan bagian dari arsitektur saat ini.
+
+---
+
+## 🧳 Portabilitas
+
+### A. Aplikasi bisa dijalankan di mana saja
+
+Fondasinya sengaja dibuat bebas infrastruktur:
+
+| Keputusan di kode | Dampak portabilitas |
+|---|---|
+| Hash router — `createWebHashHistory` (`src/router/index.js`) | URL berbentuk `#/tickets`, tanpa konflik path di hosting mana pun |
+| `publicPath: './'` (`vue.config.js`) | Semua aset dipanggil relatif — aman di subfolder / IP / `file://` |
+| Tanpa backend, tanpa `.env`, tanpa API | Build sukses di mesin mana pun tanpa rahasia |
+| `package-lock.json` di-commit | `npm ci` = dependensi identik, build terreproduksi |
+
+Konsekuensi praktisnya:
+
+- **`dist/index.html` bisa diklik dua kali langsung dari disk** (protokol `file://`) — cocok untuk flashdisk, backup offline, atau komputer tanpa internet. *Catatan: service worker tidak aktif di `file://`, tapi aplikasi dan seluruh data tetap berfungsi normal.*
+- **Target hosting bebas**: Vercel (ter-detect otomatis dari git), Netlify, GitHub Pages, Cloudflare Pages, shared hosting cPanel/Plesk, nginx internal, atau folder jaringan lokal — cukup unggah isi `dist/`. Hash mode tidak menuntut SPA fallback, jadi konfigurasi server pun tidak wajib.
+- **PWA installable & offline-first**: setelah kunjungan pertama, Workbox mem-cache *app-shell* (NetworkFirst) dan aset gambar/font (CacheFirst) — aplikasi tetap terbuka tanpa internet dan bisa dipasang sebagai aplikasi di Android, iOS, dan desktop.
+- **Lintas browser modern**: mengikuti browserslist `> 1%, last 2 versions, not dead` — Chrome/Edge/Firefox/Safari versi terbaru, termasuk mode mobile.
+
+### B. Data bisa dipindahkan antar perangkat
+
+| Kebutuhan | Cara |
+|---|---|
+| Pindah HP / laptop baru | Pengaturan → **Ekspor JSON** di perangkat lama → **Impor JSON** di perangkat baru |
+| Backup berkala | Ekspor JSON (berkas tunggal, seluruh modul) → simpan di drive/cloud pribadi |
+| Buka di komputer lain tanpa install | Salin folder `dist/` → buka `index.html` di browser apa pun |
+| Olah data di Excel / Google Sheets | **Ekspor CSV** per modul (pelanggan, tiket, transaksi, laporan, staff, dll.) |
+| Impor lead dari daftar lama | **Impor Excel/CSV** di Calon Customer (SheetJS, dengan pratinjau & anti-duplikat) |
+
+Mekanisme teknisnya:
+
+- **Ekspor/Impor JSON** memindahkan seluruh modul data sekaligus (settings, pelanggan, tiket, katalog, transaksi, agenda, staff, mitra, project, prospek, kanban) dalam satu berkas ber-versi (`version: 4`) — format ini yang menjamin berkas backup lama tetap terbaca saat skema aplikasi berkembang.
+- **Batas yang perlu diingat**: `localStorage` terikat pada *origin* (domain) browser. Pindah domain = data "tertinggal" di domain lama. Selalu **Ekspor JSON sebelum pindah domain/hosting**, lalu Impor JSON setelahnya. Data juga tidak otomatis sinkron antar perangkat — itu memang desainnya (tanpa backend).
 
 ---
 
