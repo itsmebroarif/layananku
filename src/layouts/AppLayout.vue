@@ -13,7 +13,7 @@
           <v-icon icon="mdi-headset"></v-icon>
         </v-avatar>
         <div v-if="!rail || mobile" class="overflow-hidden">
-          <div class="text-body-1 font-weight-bold text-truncate">ServiceTools</div>
+          <div class="text-body-1 font-weight-bold text-truncate">Layananku</div>
           <div class="text-caption text-medium-emphasis text-truncate">Customer Support Suite</div>
         </div>
       </div>

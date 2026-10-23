@@ -1,5 +1,6 @@
 import { read, write } from '@/utils/storage'
 import { uid, nowISO } from '@/utils/id'
+import { mitraSearchText } from '@/utils/options'
 
 const state = () => ({ list: read('mitras', []) })
 
@@ -12,7 +13,7 @@ const getters = {
   search: s => q => {
     const n = String(q || '').toLowerCase().trim()
     if (!n) return s.list
-    return s.list.filter(x => [x.name, x.company, x.email, x.phone, x.address, x.notes]
+    return s.list.filter(x => [x.name, x.company, x.email, x.phone, x.address, x.notes, x.jenis, x.usaha, mitraSearchText(x)]
       .some(v => String(v || '').toLowerCase().includes(n)))
   }
 }
